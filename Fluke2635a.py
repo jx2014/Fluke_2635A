@@ -24,22 +24,42 @@ def list_available_serial_ports():
 
 
 class DataLogger(object):
-    def __init__(self, port='COM1', baudrate=9600, timeout=10):
-        self.fluke=serial.Serial(port, timeout=timeout, baudrate=baudrate)
+    def __init__(self, port='COM1', baudrate=9600, timeout=1, writeTimeout=1):
+        self.fluke=serial.Serial(port, timeout=timeout, baudrate=baudrate, writeTimeout=writeTimeout)
         # enable ECHO and read the result to clear the output buffer
-        self.SendCmd('ECHO 1')
+              
+        self.SendCmd('ECHO 1')            
         self.CleanBuffer()
-        #self.WhoAmI()
+        
+            
+             
+          
+    def PortTest(self):
+        p = self.WhoAmI()
+        if len(p) <= 1:
+            self.close()
+            return False            
+        else:
+            return True
+        
     
-    def ReadOhms(self):
+    def ReadOhmsCh1and2(self):
+        self.query('RATE 0')
         self.ChanConfig(1, 'OFF')
         self.ChanConfig(2, 'OFF')
         self.ChanConfig(1, 'OHMS', '4')
         self.ChanConfig(2, 'OHMS', '4')
         self.TriggerMeasure()
         time.sleep(2)
-        self.GetResult(1)
-        self.GetResult(2)
+        ch1 = self.GetResult(1)
+        ch2 = self.GetResult(2)
+        #print ch1
+        #print ch2
+        if ch1[0] == 0:
+            ch1[1] = float(ch1[1])
+        if ch2[0] == 0:
+            ch2[1] = float(ch2[1])
+        return ch1, ch2
     
     def TriggerMeasure(self):
         '''
@@ -49,9 +69,9 @@ class DataLogger(object):
     
     def GetResult(self, ch=None):
         if ch is not None:
-            self.processOutput(self.query('LAST?' + ' ' + str(ch)))
+            return self.processOutput(self.query('LAST?' + ' ' + str(ch)))
         else:
-            self.processOutput(self.query('LAST?'))
+            return self.processOutput(self.query('LAST?'))
     
     def ChanConfig(self, ch, func, meas_range='AUTO', terminals=2):
         meas_range = str(meas_range)
@@ -89,12 +109,14 @@ class DataLogger(object):
     
     def WhoAmI(self):        
         self.CleanBuffer()        
-        self.SendCmd("*IDN?")
-        p = self.ReadAnyOutput()
-        print p
+        return self.query("*IDN?")
+                
         
     def Delay(self, n=0.05):
         time.sleep(n)
+    
+    def close(self):
+        self.fluke.close()
        
         
     def SendCmd(self, cmdstr):
@@ -257,7 +279,7 @@ class DataLogger(object):
                     8:'8.A-to-D Converter Not Responding',
                     9:'9.A-to-D Converter ROM Test Failed',
                     10:'10.A-to-D Converter RAM Test Failed',
-                    11:'11.A-to-D converter Self test Failed',
+                    11:'11.A-to-D converter Self MainGui Failed',
                     12:'12.Memory Card Interface Not Installed'}
         # convert STBValue to binary string    
         binValue = '{0:012b}'.format(TSTValue)    

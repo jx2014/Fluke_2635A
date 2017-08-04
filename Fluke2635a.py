@@ -193,7 +193,8 @@ class DataLogger(object):
         self.SendCmd(cmdstr)
         p = [i.strip('\r\n') for i in self.fluke.readlines()]
         return p
-    
+
+class Fluke2635ADecoder():
     def getESRResult(self, ESRValue):
         '''
             Event Status Register(ESR)
